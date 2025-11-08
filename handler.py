@@ -19,9 +19,7 @@ pipe = QwenImageEditPlusPipeline.from_pretrained(
     cache_dir=MODEL_DIR,
 )
 print("Model loaded successfully!")
-#pipe.to("cuda")
-pipe.enable_model_cpu_offload()            # or: pipe.enable_sequential_cpu_offload()
-
+pipe.to("cuda")
 pipe.enable_attention_slicing()            # already had this
 
 # memory savers like ComfyUI:
