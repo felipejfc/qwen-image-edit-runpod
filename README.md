@@ -10,8 +10,7 @@ This model edits input images according to a text prompt.
 
 **Example Input:**
 
-[![Runpod](https://api.runpod.io/badge/abhishek02git/qwen-image-edit-runpod)](https://console.runpod.io/hub/abhishek02git/qwen-image-edit-runpod)
-
+[![Runpod](https://api.runpod.io/badge/felipejfc/qwen-image-edit-runpod)](https://console.runpod.io/hub/felipejfc/qwen-image-edit-runpod)
 
 ```json
 {

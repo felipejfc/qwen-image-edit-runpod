@@ -6,10 +6,18 @@ from io import BytesIO
 import base64
 from PIL import Image
 
-# Load model on startup
+# Load model at startup - model is already cached in the Docker image
+print("Loading model...")
 pipe = DiffusionPipeline.from_pretrained(
-    "Qwen/Qwen-Image-Edit-2509", torch_dtype=torch.float16
+    "Qwen/Qwen-Image-Edit-2509",
+    torch_dtype=torch.float16,
+    low_cpu_mem_usage=True,
+    use_safetensors=True
 ).to("cuda")
+
+# Enable optimizations
+pipe.enable_attention_slicing()
+print("Model loaded successfully")
 
 def handler(event):
     """
