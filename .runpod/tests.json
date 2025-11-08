@@ -10,7 +10,7 @@
     }
   ],
   "config": {
-    "gpuTypeId": "NVIDIA RTX A4000",
+    "gpuTypeId": "NVIDIA RTX A5000",
     "gpuCount": 1,
     "env": [
       {
