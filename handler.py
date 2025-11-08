@@ -4,20 +4,14 @@ from diffusers.utils import load_image
 import torch
 from io import BytesIO
 import base64
-from PIL import Image
 
-# Load model at startup - model is already cached in the Docker image
-print("Loading model...")
+# Load model on startup
 pipe = DiffusionPipeline.from_pretrained(
     "Qwen/Qwen-Image-Edit-2509",
     torch_dtype=torch.float16,
-    low_cpu_mem_usage=True,
-    use_safetensors=True
+    variant="fp16",
+    device_map="auto",
 ).to("cuda")
-
-# Enable optimizations
-pipe.enable_attention_slicing()
-print("Model loaded successfully")
 
 def handler(event):
     """
