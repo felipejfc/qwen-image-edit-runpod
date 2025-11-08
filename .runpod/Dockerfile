@@ -1,6 +1,6 @@
 FROM runpod/pytorch:1.0.2-cu1281-torch271-ubuntu2204
 
-RUN pip install --no-cache-dir diffusers transformers accelerate safetensors pillow runpod hf_transfer bitsandbytes git+https://github.com/huggingface/diffusers
+RUN pip install --no-cache-dir transformers accelerate safetensors pillow runpod hf_transfer bitsandbytes git+https://github.com/huggingface/diffusers
 
 WORKDIR /app
 COPY handler.py /app/handler.py
