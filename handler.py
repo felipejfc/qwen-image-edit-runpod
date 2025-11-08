@@ -22,10 +22,15 @@ print("Model loaded successfully!")
 #pipe.to("cuda")
 pipe.enable_model_cpu_offload()            # or: pipe.enable_sequential_cpu_offload()
 
-# memory savers like ComfyUI:
 pipe.enable_attention_slicing()            # already had this
-pipe.enable_vae_slicing()
-pipe.enable_vae_tiling()                   # big saver for 1024x1024
+
+# memory savers like ComfyUI:
+# VAE-level memory savers (note: on the VAE, not pipeline)
+if hasattr(pipe, "vae") and pipe.vae is not None:
+    if hasattr(pipe.vae, "enable_slicing"):
+        pipe.vae.enable_slicing()
+    if hasattr(pipe.vae, "enable_tiling"):
+        pipe.vae.enable_tiling()
 
 def _to_b64(img):
     buf = io.BytesIO(); img.save(buf, format="PNG")
