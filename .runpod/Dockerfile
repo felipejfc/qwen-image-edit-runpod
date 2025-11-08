@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m pip install --upgrade pip
 
 RUN pip install --extra-index-url https://download.pytorch.org/whl/cu121 \
-    torch==2.4.1+cu121 torchvision==0.19.1+cu121
+    torch==2.4.1 torchvision==0.19.1
 
 RUN pip install \
     "diffusers[torch]>=0.31.0" \
