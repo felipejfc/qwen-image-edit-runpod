@@ -4,14 +4,20 @@ from PIL import Image
 from diffusers import QwenImageEditPlusPipeline
 from diffusers.utils import load_image
 
-MODEL_DIR = "/models/qwen_image_edit_2509"
+MODEL_ID = "Qwen/Qwen-Image-Edit-2509"
+MODEL_DIR = os.environ.get("MODEL_DIR", "/models/qwen_image_edit_2509")
+
+# Download and load model at runtime
+print(f"Loading model from {MODEL_ID}...")
+print(f"Cache directory: {MODEL_DIR}")
 
 pipe = QwenImageEditPlusPipeline.from_pretrained(
-    MODEL_DIR,
+    MODEL_ID,
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
-    local_files_only=True,   # <- critical: do not hit the hub at runtime
+    cache_dir=MODEL_DIR,
 )
+print("Model loaded successfully!")
 pipe.to("cuda")
 pipe.enable_attention_slicing()
 
