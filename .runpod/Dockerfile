@@ -8,4 +8,4 @@ COPY handler.py /app/handler.py
 # Create model cache directory for runtime downloads
 RUN mkdir -p /models/qwen_image_edit_2509 /opt/hf_cache
 
-CMD ["python3", "-u", "/app/handler.py"]
+CMD ["python", "handler.py"]

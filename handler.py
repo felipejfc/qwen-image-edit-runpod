@@ -4,6 +4,7 @@ from PIL import Image
 from diffusers import QwenImageEditPlusPipeline
 from diffusers.utils import load_image
 
+
 MODEL_ID = "Qwen/Qwen-Image-Edit-2509"
 MODEL_DIR = os.environ.get("MODEL_DIR", "/models/qwen_image_edit_2509")
 
@@ -18,8 +19,13 @@ pipe = QwenImageEditPlusPipeline.from_pretrained(
     cache_dir=MODEL_DIR,
 )
 print("Model loaded successfully!")
-pipe.to("cuda")
-pipe.enable_attention_slicing()
+#pipe.to("cuda")
+pipe.enable_model_cpu_offload()            # or: pipe.enable_sequential_cpu_offload()
+
+# memory savers like ComfyUI:
+pipe.enable_attention_slicing()            # already had this
+pipe.enable_vae_slicing()
+pipe.enable_vae_tiling()                   # big saver for 1024x1024
 
 def _to_b64(img):
     buf = io.BytesIO(); img.save(buf, format="PNG")
