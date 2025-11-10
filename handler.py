@@ -53,6 +53,10 @@ if BNB_COMPUTE not in {"fp16", "bf16"}:
 USE_LIGHTNING_LORA = os.environ.get("USE_LIGHTNING_LORA", "true").lower() == "true"
 LIGHTNING_STEPS = int(os.environ.get("LIGHTNING_STEPS", "8"))  # 4 or 8
 
+# CFG (Classifier-Free Guidance) - controls how strictly the model follows the prompt
+# Higher values (7-15) = stricter prompt adherence, Lower values (1-3) = more creative freedom
+DEFAULT_CFG_SCALE = float(os.environ.get("DEFAULT_CFG_SCALE", "4.0"))
+
 # Optional placement cap for accelerate-style loaders (string like "30GiB")
 GPU_MAX_GIB = os.environ.get("GPU_MAX_GIB", None)
 max_memory = None
@@ -65,12 +69,7 @@ if GPU_MAX_GIB:
 torch.backends.cuda.matmul.allow_tf32 = True
 # BF16 for H100 fast path; align pipeline dtype with bnb compute when offloading
 _bf16_ok = torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False
-if PRECISION_MODE == "bf16":
-    PIPELINE_DTYPE = torch.bfloat16
-elif BNB_COMPUTE == "bf16" and _bf16_ok:
-    PIPELINE_DTYPE = torch.bfloat16
-else:
-    PIPELINE_DTYPE = torch.float16
+PIPELINE_DTYPE = torch.bfloat16 if BNB_COMPUTE == "bf16" and _bf16_ok else torch.float16
 
 if BNB_COMPUTE == "bf16" and not _bf16_ok:
     print("[Init] Warning: GPU reports no BF16 support; falling back to fp16 compute for quantized modules.")
@@ -80,15 +79,16 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,max_s
 print(f"[Init] PRECISION_MODE={PRECISION_MODE}, QUANTIZE_COMPONENTS={QUANTIZE_COMPONENTS}, "
       f"INT8_CPU_OFFLOAD={INT8_CPU_OFFLOAD}, BNB_COMPUTE={BNB_COMPUTE}")
 print(f"[Init] pipeline dtype={PIPELINE_DTYPE}, bf16_supported={torch.cuda.is_bf16_supported() if torch.cuda.is_available() else None}")
+print(f"[Init] DEFAULT_CFG_SCALE={DEFAULT_CFG_SCALE}")
 
 # ====================
 # BitsAndBytes configs
 # ====================
 def _bnb_compute_dtype():
-    return torch.bfloat16 if BNB_COMPUTE == "bf16" else torch.float16
+    return PIPELINE_DTYPE
 
 def _bnb_cfg_8bit_hf():
-    return HF_BNB(load_in_8bit=True, llm_int8_enable_fp32_cpu_offload=INT8_CPU_OFFLOAD)
+    return HF_BNB(load_in_8bit=True)
 
 def _bnb_cfg_4bit_hf():
     return HF_BNB(
@@ -100,7 +100,6 @@ def _bnb_cfg_4bit_hf():
 def _bnb_cfg_8bit_df():
     return DF_BNB(
         load_in_8bit=True,
-        llm_int8_enable_fp32_cpu_offload=INT8_CPU_OFFLOAD,
         llm_int8_skip_modules=["transformer_blocks.0.img_mod"],
     )
 
@@ -128,6 +127,7 @@ def _load_text_encoder_quant(prec_mode: str):
         MODEL_ID,
         subfolder="text_encoder",
         quantization_config=q,
+        torch_dtype=PIPELINE_DTYPE,  # Critical: match working reference code
         cache_dir=MODEL_DIR,
         local_files_only=LOCAL_ONLY,
         trust_remote_code=True,
@@ -140,6 +140,7 @@ def _load_transformer_quant(prec_mode: str):
         MODEL_ID,
         subfolder="transformer",
         quantization_config=q,
+        torch_dtype=PIPELINE_DTYPE,  # Critical: match working reference code
         cache_dir=MODEL_DIR,
         local_files_only=LOCAL_ONLY,
         max_memory=max_memory if max_memory else None,
@@ -263,14 +264,14 @@ def _run_inference(event: Dict[str, Any]) -> Dict[str, Any]:
     prompt = inp.get("prompt", "Enhance the image")
     negative_prompt = inp.get("negative_prompt", None)
     steps = int(inp.get("num_inference_steps", _default_steps()))
-    cfg = float(inp.get("true_cfg_scale", 4.0))
+    cfg = float(inp.get("true_cfg_scale", DEFAULT_CFG_SCALE))
     
     # Prepare generator if seed provided
     generator = None
     if "seed" in inp:
         generator = torch.Generator(device="cuda").manual_seed(int(inp["seed"]))
     
-    # Run inference
+    # Run inference (ensure inputs match pipeline dtype)
     with torch.inference_mode():
         out = pipe(
             image=img,
