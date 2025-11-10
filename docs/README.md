@@ -95,6 +95,7 @@ Deploy to RunPod Hub for auto-scaling serverless execution:
 | `API_HOST` | `0.0.0.0` | Host address for FastAPI server |
 | `API_PORT` | `8000` | Port for FastAPI server |
 | `API_WORKERS` | `1` | Number of uvicorn worker processes |
+| `API_EXECUTOR_WORKERS` | `64` | Thread pool size for concurrent request handling |
 
 Note: If `PRECISION_MODE=bf16` but the GPU does not support bfloat16, the handler automatically falls back to fp16 and logs a warning. When running in 8-bit mode, the loader first tries to keep everything on the GPU and, if that fails due to limited VRAM, it transparently retries with fp32 CPU offload for the remaining modules.
 
@@ -132,7 +133,53 @@ STANDALONE_MODE=1 BATCH_SIZE=1 python handler.py
 
 **Note**: FastAPI's async architecture combined with the batching system allows multiple concurrent requests to be efficiently grouped and processed together, maximizing GPU utilization without blocking.
 
-### 🧪 Testing Standalone Mode
+### 🧪 Testing
+
+#### Test Standalone Mode
+
+Test concurrent requests with the local FastAPI server:
+
+```bash
+# Start the server in one terminal
+STANDALONE_MODE=1 BATCH_SIZE=4 BATCH_TIMEOUT_MS=40 python handler.py
+
+# Run the test in another terminal
+python test_batching.py
+```
+
+This test sends 10 concurrent requests with unique prompts and verifies:
+- Each request receives the correct response (prompt matching)
+- Batching is working efficiently
+- Response mapping is accurate under concurrent load
+
+#### Test RunPod Deployment
+
+Test your deployed RunPod endpoint with configurable concurrent load:
+
+```bash
+# Configure via environment variables (recommended)
+export API_URL="https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync"
+export API_KEY="YOUR_RUNPOD_API_KEY"
+export CONCURRENT_REQUESTS="20"
+
+# Run the test (make sure to fill in PROMPT_TEMPLATES in the script)
+python test_runpod_batching.py
+
+# Or for standalone mode:
+export API_URL="http://localhost:8888/run"
+python test_runpod_batching.py
+```
+
+Features:
+- Configurable concurrent request count
+- 5 prompt templates (shuffled across requests)
+- Uses your specified image URL
+- Measures timing and throughput
+- Verifies correct per-request response mapping
+- Per-prompt statistics
+- **Automatically saves all result images** to `test_results/TIMESTAMP/`
+
+#### Manual Tests
 
 Test the API with both `image_url` and `image_base64` inputs:
 

@@ -1,7 +1,12 @@
-torch
 git+https://github.com/huggingface/diffusers
-transformers
-accelerate
-safetensors
-pillow
+transformers>=4.49.0
+accelerate>=1.2.1
+safetensors>=0.4.0
+pillow>=10.0.0
 runpod
+bitsandbytes>=0.45.0
+peft>=0.14.0
+torchvision>=0.20.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0

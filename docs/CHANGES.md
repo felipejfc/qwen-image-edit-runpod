@@ -1,5 +1,15 @@
 # Changes Summary
 
+## Latest Updates (v2.0)
+
+### New in this version:
+- **Dynamic Batching**: Configurable request batching for improved throughput
+- **Precision Mode**: Unified `PRECISION_MODE` env var (bf16, 8bit, 4bit)
+- **Precision Fallback**: Auto-switch to fp16 when GPU lacks bf16 support
+- **Int8 Resilience**: 8-bit loading now retries with fp32 CPU offload if VRAM is insufficient
+- **Memory Optimizations**: xformers attention, VAE tiling/slicing
+- **Fixed Dependencies**: Updated transformers>=4.49.0 for Qwen2.5-VL compatibility
+
 ## What's New
 
 ### 1. 4-bit Quantization
