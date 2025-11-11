@@ -70,7 +70,7 @@ Deploy to RunPod Hub for auto-scaling serverless execution:
 | `prompt` | string | "Enhance the image" | Text description of desired edit |
 | `image_url` | string | **required** | URL of input image |
 | `num_inference_steps` | int | 8 (with Lightning) or 40 | Number of denoising steps |
-| `true_cfg_scale` | float | 4.0 | Classifier-free guidance scale |
+| `true_cfg_scale` | float | 4.0 | CFG (Classifier-Free Guidance) scale - controls prompt adherence. Higher values (7-15) follow prompt more strictly, lower values (1-3) allow more creativity |
 | `negative_prompt` | string | null | What to avoid in the image |
 | `seed` | int | random | Random seed for reproducibility |
 
@@ -83,6 +83,7 @@ Deploy to RunPod Hub for auto-scaling serverless execution:
 | `PRECISION_MODE` | `8bit` | Precision selection: `8bit`, `4bit`, or `bf16` |
 | `USE_LIGHTNING_LORA` | `true` | Enable Lightning LoRA for fast inference |
 | `LIGHTNING_STEPS` | `8` | Steps for Lightning mode (4 or 8) |
+| `DEFAULT_CFG_SCALE` | `4.0` | Default CFG (Classifier-Free Guidance) scale. Higher (7-15) = stricter prompt adherence, lower (1-3) = more creative freedom |
 | `BATCH_SIZE` | `4` | Maximum number of requests per batch |
 | `BATCH_TIMEOUT_MS` | `40` | Wait time in milliseconds before processing partial batch |
 | `MODEL_DIR` | `/models/qwen_image_edit_2509` | Cache directory for models |

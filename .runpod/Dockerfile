@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
         --index-url https://download.pytorch.org/whl/cu128
 
 WORKDIR /app
-COPY handler.py /app/handler.py
+COPY *.py /app/
 
 # Create model cache directory for runtime downloads
 RUN mkdir -p /models/qwen_image_edit_2509 /opt/hf_cache
