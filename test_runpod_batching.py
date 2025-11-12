@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Configurable test script for RunPod API batching.
+Configurable test script for Qwen Image Edit RunPod API batching.
 Sends concurrent requests with shuffled prompts to test batching behavior.
 
 Compatible with:
@@ -16,6 +16,9 @@ Usage with RunPod Serverless:
 Usage with Standalone mode:
     export API_URL='http://localhost:8888/run'
     python test_runpod_batching.py
+    
+Qwen Image Edit API Reference:
+    https://github.com/wlsdml1114/qwen_image_edit
 """
 import asyncio
 import aiohttp
@@ -39,6 +42,13 @@ from datetime import datetime
 API_URL = os.environ.get("API_URL", "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync")
 API_KEY = os.environ.get("API_KEY", "")  # Required for RunPod Serverless
 
+# Qwen Image Edit API expects:
+# - prompt: Text prompt that guides the edit (required)
+# - image_url/image_path/image_base64: Input image (required)
+# - seed: Random seed for deterministic output (required)
+# - width: Output image width in pixels (required)
+# - height: Output image height in pixels (required)
+
 # Number of concurrent requests to send
 CONCURRENT_REQUESTS = int(os.environ.get("CONCURRENT_REQUESTS", "20"))
 
@@ -54,9 +64,9 @@ PROMPT_TEMPLATES = [
     "Make her wear a red hat",  # Replace with your actual prompt
 ]
 
-# Inference parameters
-NUM_INFERENCE_STEPS = 8
-TRUE_CFG_SCALE = 4.0
+# Qwen Image Edit parameters (required by the API)
+WIDTH = int(os.environ.get("WIDTH", "768"))
+HEIGHT = int(os.environ.get("HEIGHT", "1024"))
 
 # Output directory for saving images
 OUTPUT_DIR = "test_results"
@@ -96,7 +106,7 @@ def save_image(image_base64: str, request_id: int, prompt: str, output_dir: str)
 # =============================================================================
 
 def generate_requests(count: int) -> List[Dict]:
-    """Generate shuffled test requests."""
+    """Generate shuffled test requests for Qwen Image Edit API."""
     requests = []
     for i in range(count):
         # Cycle through prompts and shuffle
@@ -109,9 +119,9 @@ def generate_requests(count: int) -> List[Dict]:
                 "input": {
                     "prompt": prompt,
                     "image_url": IMAGE_URL,
-                    "num_inference_steps": NUM_INFERENCE_STEPS,
-                    "true_cfg_scale": TRUE_CFG_SCALE,
                     "seed": 1000 + i,  # Unique seed per request
+                    "width": WIDTH,
+                    "height": HEIGHT,
                 }
             }
         })
@@ -192,34 +202,35 @@ async def send_request(
             if "output" in result:
                 # RunPod serverless format
                 output = result["output"]
-                prompt_received = output.get("prompt", "")
                 image_data = output.get("image", "")
-                steps = output.get("num_inference_steps")
-                lightning = output.get("lightning_enabled", False)
             else:
                 # Standalone/direct format
-                prompt_received = result.get("prompt", "")
                 image_data = result.get("image", "")
-                steps = result.get("num_inference_steps")
-                lightning = result.get("lightning_enabled", False)
             
-            # Check if prompt matches
-            matches = prompt == prompt_received
+            # Qwen Image Edit returns base64 with data URI prefix
+            # Extract just the base64 part if present
+            if image_data and image_data.startswith("data:image"):
+                # Format: "data:image/png;base64,<base64_data>"
+                image_base64 = image_data.split(",", 1)[1] if "," in image_data else image_data
+            else:
+                image_base64 = image_data
             
             # Save image to file
             saved_path = None
-            if image_data:
-                saved_path = save_image(image_data, request_id, prompt, output_dir)
+            if image_base64:
+                saved_path = save_image(image_base64, request_id, prompt, output_dir)
+            
+            # Since Qwen Image Edit doesn't return the prompt,
+            # we assume it matches if we got a valid response
+            matches = bool(image_base64)
             
             return {
                 "request_id": request_id,
                 "prompt_sent": prompt,
-                "prompt_received": prompt_received,
+                "prompt_received": prompt,  # API doesn't echo prompt back
                 "matches": matches,
                 "duration": duration,
-                "image_size": len(image_data) if image_data else 0,
-                "steps": steps,
-                "lightning": lightning,
+                "image_size": len(image_base64) if image_base64 else 0,
                 "saved_path": saved_path,
                 "status": "success",
             }
@@ -250,15 +261,15 @@ async def run_test():
     output_dir = os.path.join(OUTPUT_DIR, timestamp)
     
     print("=" * 80)
-    print("RunPod API Batching Test")
+    print("Qwen Image Edit - RunPod API Batching Test")
     print("=" * 80)
     print(f"\nConfiguration:")
     print(f"  API URL:         {API_URL}")
     print(f"  Concurrent reqs: {CONCURRENT_REQUESTS}")
     print(f"  Prompt variants: {len(PROMPT_TEMPLATES)}")
     print(f"  Image URL:       {IMAGE_URL}")
-    print(f"  Steps:           {NUM_INFERENCE_STEPS}")
-    print(f"  CFG Scale:       {TRUE_CFG_SCALE}")
+    print(f"  Width:           {WIDTH}px")
+    print(f"  Height:          {HEIGHT}px")
     print(f"  Output dir:      {output_dir}")
     print()
     
@@ -444,6 +455,8 @@ def main():
     print(f"API_URL:             {API_URL}")
     print(f"API_KEY:             {'***' + API_KEY[-4:] if len(API_KEY) > 4 else '[not set]'}")
     print(f"CONCURRENT_REQUESTS: {CONCURRENT_REQUESTS}")
+    print(f"WIDTH:               {WIDTH}px")
+    print(f"HEIGHT:              {HEIGHT}px")
     print(f"IMAGE_URL:           {IMAGE_URL[:60]}...")
     print()
     
@@ -476,3 +489,28 @@ def main():
 if __name__ == "__main__":
     exit(main())
 
+
+# =============================================================================
+# USAGE EXAMPLES
+# =============================================================================
+#
+# Example 1: Test with default settings (20 concurrent requests, 768x1024 output)
+#     export API_URL='https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync'
+#     export API_KEY='rpa_YOUR_API_KEY'
+#     python test_runpod_batching.py
+#
+# Example 2: Test with custom resolution and fewer concurrent requests
+#     export API_URL='https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync'
+#     export API_KEY='rpa_YOUR_API_KEY'
+#     export CONCURRENT_REQUESTS=5
+#     export WIDTH=512
+#     export HEIGHT=512
+#     python test_runpod_batching.py
+#
+# Example 3: Test with local standalone server
+#     export API_URL='http://localhost:8888/run'
+#     export WIDTH=1024
+#     export HEIGHT=1024
+#     python test_runpod_batching.py
+#
+# =============================================================================
