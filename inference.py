@@ -1,6 +1,9 @@
 """Inference logic."""
 import torch
+import base64
+import io
 from typing import Dict, Any
+from PIL import Image
 from diffusers.utils import load_image
 
 from utils import to_base64, default_steps
@@ -12,7 +15,15 @@ def run_inference(pipe, event: Dict[str, Any]) -> Dict[str, Any]:
     inp = event["input"]
     
     # Load and prepare image
-    img = load_image(inp["image_url"]).convert("RGB")
+    # Support both base64 and URL inputs
+    if "image_base64" in inp and inp["image_base64"]:
+        # Decode base64 image
+        img_data = base64.b64decode(inp["image_base64"])
+        img = Image.open(io.BytesIO(img_data)).convert("RGB")
+    elif "image_url" in inp and inp["image_url"]:
+        img = load_image(inp["image_url"]).convert("RGB")
+    else:
+        raise ValueError("Either 'image_base64' or 'image_url' must be provided")
     
     # Get parameters
     prompt = inp.get("prompt", "Enhance the image")

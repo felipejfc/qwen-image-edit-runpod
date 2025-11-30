@@ -68,11 +68,14 @@ Deploy to RunPod Hub for auto-scaling serverless execution:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | string | "Enhance the image" | Text description of desired edit |
-| `image_url` | string | **required** | URL of input image |
+| `image_url` | string | **required*** | URL of input image (either this or `image_base64` required) |
+| `image_base64` | string | **required*** | Base64-encoded input image (either this or `image_url` required) |
 | `num_inference_steps` | int | 8 (with Lightning) or 40 | Number of denoising steps |
 | `true_cfg_scale` | float | 4.0 | CFG (Classifier-Free Guidance) scale - controls prompt adherence. Higher values (7-15) follow prompt more strictly, lower values (1-3) allow more creativity |
 | `negative_prompt` | string | null | What to avoid in the image |
 | `seed` | int | random | Random seed for reproducibility |
+
+\* Either `image_url` or `image_base64` must be provided, but not both.
 
 ### ⚙️ Environment Variables
 
